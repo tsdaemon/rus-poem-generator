@@ -17,7 +17,7 @@ def generate(poet_id):
     request_data = request.get_json()
     seed = request_data['seed']
     try:
-        generated_poem = phonetic_poet.generate_poem(seed, poet_id)
+        generated_poem = poet.generate_poem(seed, poet_id)
         return jsonify({'poem': generated_poem})
     except KeyError:
         abort(404)
