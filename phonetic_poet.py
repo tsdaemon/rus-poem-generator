@@ -3,10 +3,8 @@ import copy
 
 from utils import Phonetic, PoemTemplateLoader, Word2vecProcessor
 
-# Каталог с общими наборами данных, доступный на проверяющем сервере
-# Нет необходимости добавлять файлы из этого каталога в архив с решением
-# (подробности см. в описании соревнования)
-DATASETS_PATH = os.environ.get('DATASETS_PATH', './data')
+# Загальні набори даних, присутні на тестувальному сервері
+DATASETS_PATH = os.environ.get('DATASETS_PATH', '/data/')
 
 # Шаблоны стихов: строим их на основе собраний сочинений от организаторов
 template_loader = PoemTemplateLoader(os.path.join(DATASETS_PATH, 'classic_poems.json'))
@@ -15,7 +13,7 @@ template_loader = PoemTemplateLoader(os.path.join(DATASETS_PATH, 'classic_poems.
 word2vec = Word2vecProcessor(os.path.join(DATASETS_PATH, 'web_upos_cbow_300_20_2017.bin.gz'))
 
 # Словарь ударений: берется из локального файла, который идет вместе с решением
-phonetic = Phonetic(os.path.join(DATASETS_PATH, 'words_accent.json.bz2'))
+phonetic = Phonetic(os.path.join('./data', 'words_accent.json.bz2'))
 
 # Словарь слов-кандидатов по фонетическим формам: строится из набора данных SDSJ 2017
 word_by_form = phonetic.form_dictionary_from_csv(os.path.join(DATASETS_PATH, 'sdsj2017_sberquad.csv'))
