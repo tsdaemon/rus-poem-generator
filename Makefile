@@ -1,4 +1,4 @@
-DATASETS_PATH:=$(HOME)/.classic-ai-local-data
+export DATASETS_PATH:=$(HOME)/.classic-ai-local-data
 
 download:
 	rm -rf ./data
