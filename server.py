@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, abort
 
 # Загрузка этого модуля занимает продолжительное время
 # т.к. в нем загружаются корпуса текстов и модели
-import phonetic_poet
+import poet
 
 app = Flask(__name__)
 

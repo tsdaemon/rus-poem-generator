@@ -10,9 +10,6 @@ from gensim.models import KeyedVectors
 from pymystem3 import Mystem
 
 
-
-
-
 class PoemTemplateLoader(object):
     """
     Хранит шаблоны стихотворений, полученные из собрания сочинений.

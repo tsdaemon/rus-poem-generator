@@ -1,7 +1,8 @@
 import os
 import copy
 
-from utils import Phonetic, PoemTemplateLoader, Word2vecProcessor
+from word_forms import Phonetic, WordForms
+from utils import PoemTemplateLoader, Word2vecProcessor
 
 # Загальні набори даних, присутні на тестувальному сервері
 DATASETS_PATH = os.environ.get('DATASETS_PATH', '/data/')
@@ -18,7 +19,8 @@ phonetic = Phonetic(os.path.join('./data', 'words_accent.json.bz2'))
 # Словарь слов-кандидатов по фонетическим формам: строится из набора данных SDSJ 2017
 # TODO: SDSJ 2017 – це просто корпус, ми можемо взяти будь який інший, який нам краще підійде
 # Наприклад, корпус вікіпедії
-word_by_form = phonetic.form_dictionary_from_csv(os.path.join(DATASETS_PATH, 'sdsj2017_sberquad.csv'))
+word_forms = WordForms(phonetic)
+word_by_form = word_forms.form_dictionary_from_csv(os.path.join(DATASETS_PATH, 'sdsj2017_sberquad.csv'))
 
 
 def generate_poem(seed, poet_id):
@@ -42,7 +44,7 @@ def generate_poem(seed, poet_id):
             word = token.lower()
 
             # выбираем слова - кандидаты на замену: максимально похожие фонетически на исходное слово
-            form = phonetic.get_form(token)
+            form = word_forms.get_form(token)
             candidate_phonetic_distances = [
                 (replacement_word, phonetic.sound_distance(replacement_word, word))
                 for replacement_word in word_by_form[form]

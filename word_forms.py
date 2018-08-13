@@ -1,8 +1,11 @@
 import bz2
 import csv
 import itertools
+import collections
 
 import json
+from nltk.tokenize import word_tokenize
+from pymorphy2 import MorphAnalyzer
 
 
 class Phonetic(object):
@@ -22,11 +25,6 @@ class Phonetic(object):
         default_accent = (self.syllables_count(word) + 1) // 2
         return self.accents_dict.get(word, default_accent)
 
-    def get_form(self, word):
-        word_syllables = self.syllables_count(word)
-        word_accent = self.accent_syllable(word)
-        return (word_syllables, word_accent)
-
     def sound_distance(self, word1, word2):
         """Фонетическое растояние на основе расстояния Левенштейна по окончаниям
         (число несовпадающих символов на соответствующих позициях)"""
@@ -39,15 +37,15 @@ class Phonetic(object):
 
 
 class WordForms(object):
-    def __init__(self, phonetic, pos):
+    def __init__(self, phonetic):
         self.phonetic = phonetic
-        self.pos = pos
+        self.pos = MorphAnalyzer()
 
     def form_dictionary_from_csv(self, corpora_file, column='paragraph', max_docs=30000):
         """Загрузить словарь слов из CSV файла с текстами, индексированный по формам слова.
         Возвращает словарь вида:
             {форма: {множество, слов, кандидатов, ...}}
-            форма — (<число_слогов>, <номер_ударного>)
+            форма — (<число_слогов>, <номер_ударного>, <POS>)
         """
 
         corpora_tokens = []
@@ -61,9 +59,18 @@ class WordForms(object):
         word_by_form = collections.defaultdict(set)
         for token in corpora_tokens:
             if token.isalpha():
-                word_syllables = self.syllables_count(token)
-                word_accent = self.accent_syllable(token)
-                form = (word_syllables, word_accent)
+                word_syllables = self.phonetic.syllables_count(token)
+                word_accent = self.phonetic.accent_syllable(token)
+                word_tag = self.pos.parse(token)[0].tag
+                word_pos = word_tag.POS
+                form = (word_syllables, word_accent, word_pos)
                 word_by_form[form].add(token)
 
         return word_by_form
+
+    def get_form(self, word):
+        word_syllables = self.phonetic.syllables_count(word)
+        word_accent = self.phonetic.accent_syllable(word)
+        word_tag = self.pos.parse(word)[0].tag
+        word_pos = word_tag.POS
+        return (word_syllables, word_accent, word_pos)
