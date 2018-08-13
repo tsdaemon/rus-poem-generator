@@ -1,26 +1,51 @@
 import os
 import copy
+import pickle
+from timeit import default_timer as timer
 
 from word_forms import Phonetic, WordForms
 from utils import PoemTemplateLoader, Word2vecProcessor
 
 # Загальні набори даних, присутні на тестувальному сервері
 DATASETS_PATH = os.environ.get('DATASETS_PATH', '/data/')
+LOCAL_DATA_PATH = './data'
+timers = {}
+
+
+def measure_time(func, name):
+    start = timer()
+    result = func()
+    timers[name] = timer()-start
+    return result
+
 
 # Шаблоны стихов: строим их на основе собраний сочинений от организаторов
-template_loader = PoemTemplateLoader(os.path.join(DATASETS_PATH, 'classic_poems.json'))
+template_loader = measure_time(
+    lambda: PoemTemplateLoader(os.path.join(DATASETS_PATH, 'classic_poems.json')),
+    'Templates'
+)
 
 # Word2vec модель для оценки схожести слов и темы: берем из каталога RusVectores.org
-word2vec = Word2vecProcessor(os.path.join(DATASETS_PATH, 'web_upos_cbow_300_20_2017.bin.gz'))
+word2vec = measure_time(
+    lambda: Word2vecProcessor(os.path.join(DATASETS_PATH, 'web_upos_cbow_300_20_2017.bin.gz')),
+    'Word2vec'
+)
 
-# Словарь ударений: берется из локального файла, который идет вместе с решением
-phonetic = Phonetic(os.path.join('./data', 'words_accent.json.bz2'))
 
-# Словарь слов-кандидатов по фонетическим формам: строится из набора данных SDSJ 2017
-# TODO: SDSJ 2017 – це просто корпус, ми можемо взяти будь який інший, який нам краще підійде
-# Наприклад, корпус вікіпедії
-word_forms = WordForms(phonetic)
-word_by_form = word_forms.form_dictionary_from_csv(os.path.join(DATASETS_PATH, 'sdsj2017_sberquad.csv'))
+phonetic = measure_time(
+    lambda: Phonetic(os.path.join(LOCAL_DATA_PATH, 'words_accent.json.bz2')),
+    'Phonetic'
+)
+
+with open(os.path.join(LOCAL_DATA_PATH, 'words_forms.bin'), 'rb') as f:
+    word_forms = measure_time(
+        lambda: pickle.load(f),
+        'Word forms'
+    )
+
+timers['Total'] = sum(v for k,v in timers.items())
+
+print('Load finished, elapsed time: {}'.format(timers))
 
 
 def generate_poem(seed, poet_id):

@@ -6,6 +6,7 @@ import collections
 import json
 from nltk.tokenize import word_tokenize
 from pymorphy2 import MorphAnalyzer
+from tqdm import tqdm
 
 
 class Phonetic(object):
@@ -37,33 +38,18 @@ class Phonetic(object):
 
 
 class WordForms(object):
-    def __init__(self, phonetic):
+    def __init__(self, phonetic, corpus_reader):
         self.phonetic = phonetic
         self.pos = MorphAnalyzer()
+        self.corpus = corpus_reader()
+        print('Corpus length: {}'.format(len(self.corpus)))
+        self.word_by_form = self.parse_word_forms()
 
-    def form_dictionary_from_csv(self, corpora_file, column='paragraph', max_docs=30000):
-        """Загрузить словарь слов из CSV файла с текстами, индексированный по формам слова.
-        Возвращает словарь вида:
-            {форма: {множество, слов, кандидатов, ...}}
-            форма — (<число_слогов>, <номер_ударного>, <POS>)
-        """
-
-        corpora_tokens = []
-        with open(corpora_file) as fin:
-            reader = csv.DictReader(fin)
-            for row in itertools.islice(reader, max_docs):
-                paragraph = row[column]
-                paragraph_tokens = word_tokenize(paragraph.lower())
-                corpora_tokens += paragraph_tokens
-
+    def parse_word_forms(self):
         word_by_form = collections.defaultdict(set)
-        for token in corpora_tokens:
+        for token in tqdm(self.corpus, desc='Parsing word forms'):
             if token.isalpha():
-                word_syllables = self.phonetic.syllables_count(token)
-                word_accent = self.phonetic.accent_syllable(token)
-                word_tag = self.pos.parse(token)[0].tag
-                word_pos = word_tag.POS
-                form = (word_syllables, word_accent, word_pos)
+                form = self.get_form(token)
                 word_by_form[form].add(token)
 
         return word_by_form
@@ -72,5 +58,22 @@ class WordForms(object):
         word_syllables = self.phonetic.syllables_count(word)
         word_accent = self.phonetic.accent_syllable(word)
         word_tag = self.pos.parse(word)[0].tag
-        word_pos = word_tag.POS
-        return (word_syllables, word_accent, word_pos)
+        word_pos = str(word_tag.POS)
+        return word_syllables, word_accent, word_pos
+
+
+def get_csv_reader(corpora_file, column, max_docs=50000):
+    def read():
+        corpora_tokens = []
+        with open(corpora_file) as fin:
+            reader = csv.DictReader(fin)
+            total = max_docs
+            for row in tqdm(itertools.islice(reader, max_docs),
+                            desc='Reading corpora',
+                            total=total):
+                paragraph = row[column]
+                paragraph_tokens = word_tokenize(paragraph.lower())
+                corpora_tokens += paragraph_tokens
+        return set(corpora_tokens)
+
+    return read
