@@ -16,6 +16,8 @@ word2vec = Word2vecProcessor(os.path.join(DATASETS_PATH, 'web_upos_cbow_300_20_2
 phonetic = Phonetic(os.path.join('./data', 'words_accent.json.bz2'))
 
 # Словарь слов-кандидатов по фонетическим формам: строится из набора данных SDSJ 2017
+# TODO: SDSJ 2017 – це просто корпус, ми можемо взяти будь який інший, який нам краще підійде
+# Наприклад, корпус вікіпедії
 word_by_form = phonetic.form_dictionary_from_csv(os.path.join(DATASETS_PATH, 'sdsj2017_sberquad.csv'))
 
 
@@ -51,6 +53,7 @@ def generate_poem(seed, poet_id):
             replacement_candidates = [w for w, d in candidate_phonetic_distances if d == min_phonetic_distance]
 
             # из кандидатов берем максимально близкое теме слово
+            # TODO: оце можна пришвидчити якщо перемножувати тензори одразу пачкою і на GPU
             word2vec_distances = [
                 (replacement_word, word2vec.distance(seed_vec, word2vec.word_vector(replacement_word)))
                 for replacement_word in replacement_candidates

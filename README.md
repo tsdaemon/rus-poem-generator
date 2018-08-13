@@ -21,8 +21,10 @@
 - [`sdsj2017_sberquad.csv`](https://bucketeer-db1966c9-c9f8-427d-ae61-659a91a9fca7.s3.amazonaws.com/public/sdsj2017_sberquad.csv) — набор данных для обучения вопросо-ответной системы из [Sberbank Data Science Journey 2017](https://github.com/sberbank-ai/data-science-journey-2017)
 - [`rusvectores/web_upos_cbow_300_20_2017.bin.gz`](http://rusvectores.org/static/models/web_upos_cbow_300_20_2017.bin.gz) — предобученная word2vec модель для русского языка (источник http://rusvectores.org/ru/models/)
 
-Скачати це все можливо, виконавши скрипт `make download`.
+Установка пакетів: `pip install -r requirements.txt`. Один з пакетів хоститься на CDN Яндекса, 
+тому необхідно включити VPN.
 
+Скачати це все можливо, виконавши скрипт `make download`.
 Запуск: `make server`.
 
 Описание используемой word2vec модели [RusVectores](http://rusvectores.org/ru/about/) можно найти в публикации:
