@@ -36,7 +36,7 @@ class PoemTemplateLoader(object):
         poem_lines = poem_text.split('\n')[:self.max_lines]
         poem_template = []
         for line in poem_lines:
-            line_tokens = [token for token in word_tokenize(line) if token.isalpha()]
+            line_tokens = [token.lower() for token in word_tokenize(line) if token.isalpha()]
             poem_template.append(line_tokens)
         return poem_template
 

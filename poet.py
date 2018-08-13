@@ -6,11 +6,15 @@ from timeit import default_timer as timer
 from word_forms import Phonetic, WordForms
 from utils import PoemTemplateLoader, Word2vecProcessor
 
-# Загальні набори даних, присутні на тестувальному сервері
+# Загальні набори даних присутні на тестувальному сервері
 DATASETS_PATH = os.environ.get('DATASETS_PATH', '/data/')
+# Наші набори даних присутні локально
 LOCAL_DATA_PATH = './data'
 timers = {}
 
+# Гіперпараметри
+MAX_PHONETIC_DISTANCE_TO_CHANGE = 1
+MAX_COSINE_DISTANCE_TO_CHANGE = 0.7
 
 def measure_time(func, name):
     start = timer()
@@ -62,22 +66,27 @@ def generate_poem(seed, poet_id):
 
     # заменяем слова в шаблоне на более релевантные теме
     for li, line in enumerate(poem):
-        for ti, token in enumerate(line):
-            if not token.isalpha():
+        for ti, word in enumerate(line):
+            if not word.isalpha():
                 continue
 
-            word = token.lower()
-
             # выбираем слова - кандидаты на замену: максимально похожие фонетически на исходное слово
-            form = word_forms.get_form(token)
+            # Крім того, обираємо слова тої самої частини мови
+            form = word_forms.get_form(word)
             candidate_phonetic_distances = [
                 (replacement_word, phonetic.sound_distance(replacement_word, word))
-                for replacement_word in word_by_form[form]
+                for replacement_word in word_forms.word_by_form[form] if replacement_word != word
                 ]
             if not candidate_phonetic_distances or form == (0, 0):
                 continue
             min_phonetic_distance = min(d for w, d in candidate_phonetic_distances)
+            if min_phonetic_distance > MAX_PHONETIC_DISTANCE_TO_CHANGE:
+                continue
+
             replacement_candidates = [w for w, d in candidate_phonetic_distances if d == min_phonetic_distance]
+
+            # Додаємо оригінальне слово, можливо воно вже непогано підходить
+            replacement_candidates.append(word)
 
             # из кандидатов берем максимально близкое теме слово
             # TODO: оце можна пришвидчити якщо перемножувати тензори одразу пачкою і на GPU
@@ -86,9 +95,13 @@ def generate_poem(seed, poet_id):
                 for replacement_word in replacement_candidates
                 ]
             word2vec_distances.sort(key=lambda pair: pair[1])
-            new_word, _ = word2vec_distances[0]
+            new_word, distance = word2vec_distances[0]
+            if distance > MAX_COSINE_DISTANCE_TO_CHANGE:
+                continue
 
             poem[li][ti] = new_word
+
+    assert template != poem, 'Should change something'
 
     # собираем получившееся стихотворение из слов
     generated_poem = '\n'.join([' '.join([token for token in line]) for line in poem])
