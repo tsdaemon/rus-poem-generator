@@ -37,8 +37,10 @@ class Phonetic(object):
         return distance
 
 
+DO_NOT_WANT_TO_REPLACE = ['эх', 'и', 'еще', 'уже', 'когда']
+
+
 class WordForms(object):
-    DO_NOT_WANT_TO_REPLACE = ['эх']
 
     def __init__(self, phonetic, corpus_reader):
         self.phonetic = phonetic
@@ -51,9 +53,9 @@ class WordForms(object):
         word_by_form = collections.defaultdict(set)
         for token in tqdm(self.corpus, desc='Parsing word forms'):
             if token.isalpha():
-                forms = self.get_forms(token)
-                for form in forms:
-                    word_by_form[form].add(token)
+                forms_n_lemmas = self.get_forms(token)
+                for form, lemma in forms_n_lemmas:
+                    word_by_form[form].add((token, lemma))
 
         return word_by_form
 
@@ -65,23 +67,23 @@ class WordForms(object):
         """
 
         # Деякі виключення — слова які не варто заміняти
-        if word in self.DO_NOT_WANT_TO_REPLACE:
+        if word in DO_NOT_WANT_TO_REPLACE:
             return []
 
         word_syllables = self.phonetic.syllables_count(word)
         word_accent = self.phonetic.accent_syllable(word)
-        tags = [parse.tag for parse in self.pos.parse(word)]
         forms = []
-        for word_tag in tags:
-            word_pos = str(word_tag.POS)
-            word_gender = str(word_tag.gender)
-            word_number = str(word_tag.number)
-            word_tense = str(word_tag.tense)
-            word_case = str(word_tag.case)
+        for parse in self.pos.parse(word):
+            word_pos = str(parse.tag.POS)
+            word_gender = str(parse.tag.gender)
+            word_number = str(parse.tag.number)
+            word_tense = str(parse.tag.tense)
+            word_case = str(parse.tag.case)
+            lemma = str(parse.normal_form)
 
             form = (word_syllables, word_accent, word_pos, word_gender, word_number,
                     word_tense, word_case)
-            forms.append(form)
+            forms.append((form, lemma))
         return list(set(forms))
 
 
