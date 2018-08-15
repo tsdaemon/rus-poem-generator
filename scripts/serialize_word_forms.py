@@ -28,5 +28,8 @@ if __name__ == '__main__':
 
     # Instance
     word_forms = WordForms(phonetic, reader)
-    with open(os.path.join(LOCAL_DATA_PATH, 'words_forms.bin'), 'wb') as f:
+    filename = os.path.join(LOCAL_DATA_PATH, 'words_forms.bin')
+    if os.path.exists(filename):
+        os.remove(filename)
+    with open(filename, 'wb') as f:
         pickle.dump(word_forms, f)

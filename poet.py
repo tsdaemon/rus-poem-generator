@@ -15,7 +15,7 @@ timers = {}
 # Гіперпараметри
 MAX_PHONETIC_DISTANCE_TO_CHANGE = 1
 MAX_COSINE_DISTANCE_TO_CHANGE = 0.7
-POS_TO_REPLACE = ['NOUN', 'AVJ', 'VERB']
+POS_TO_REPLACE = ['NOUN', 'AVJ', 'ADJF', 'ADJM', 'VERB', 'ADVB']  # TODO: це можна розширити
 
 def measure_time(func, name):
     start = timer()
@@ -94,6 +94,9 @@ def generate_poem(seed, poet_id):
     # оцениваем word2vec-вектор темы
     seed_vec = word2vec.text_vector(seed)
 
+    # не використовуємо слова більше ніж два рази
+    used_words = []
+
     # заменяем слова в шаблоне на более релевантные теме
     for li, line in enumerate(poem):
         for ti, word in enumerate(line):
@@ -101,39 +104,50 @@ def generate_poem(seed, poet_id):
                 continue
 
             # Рахуємо форму слова — наголос, кількість голосних, частина мови
-            form = word_forms.get_form(word)
-            if form == (0, 0):
+            # TODO: якщо використати тут інший (не словниковий) алгоритм визначення частини мови,
+            # можна визначити частину мови однозначно.
+            forms = word_forms.get_forms(word)
+            if not forms:
                 continue
 
             # Заміняємо тільки іменники, дієслова та прикметники
-            if form[2] not in POS_TO_REPLACE:
+            if forms[0][2] not in POS_TO_REPLACE:
                 continue
 
             # Обираємо можливі замінники. Знаходимо слова, які мають таку саму форму
+            words_by_forms = [word_forms.word_by_form[f] for f in forms]
             replacement_candidates = [
-                replacement_word for replacement_word
-                in word_forms.word_by_form[form] if replacement_word != word
+                item
+                for sublist in words_by_forms
+                for item in sublist
+                if item not in used_words
             ]
             if not replacement_candidates:
                 continue
 
             # Якщо це останнє слово в рядку, фільтруємо кандидатів за фонетичною відстаню
-            # if ti == len(line)-1:
-            replacement_candidates = _filter_words_by_phonetic_distance(
-                replacement_candidates,
-                word
-            )
-            if not replacement_candidates:
-                continue
+            if ti == len(line)-1:
+                replacement_candidates = _filter_words_by_phonetic_distance(
+                    replacement_candidates,
+                    word
+                )
+                if not replacement_candidates:
+                    continue
 
             # Додаємо оригінальне слово, можливо воно вже непогано підходить
             replacement_candidates.append(word)
+
+            # Фільтруємо повтори
+            replacement_candidates = set(replacement_candidates)
+            if len(replacement_candidates) < 2:
+                continue
 
             new_word = _get_word_by_vector(replacement_candidates, seed_vec)
             if not new_word:
                 continue
 
             poem[li][ti] = new_word
+            used_words.append(new_word)
 
     assert template != poem, 'Should change something'
 

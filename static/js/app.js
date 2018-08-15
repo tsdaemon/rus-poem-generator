@@ -1,6 +1,6 @@
 'use strict';
 
-angular.module('poetry', [])
+angular.module('poetry', ['diff'])
 .config(['$interpolateProvider', function($interpolateProvider) {
   $interpolateProvider.startSymbol('{a');
   $interpolateProvider.endSymbol('a}');

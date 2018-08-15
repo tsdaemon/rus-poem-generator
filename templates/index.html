@@ -46,15 +46,15 @@
         <div class="row" ng-show="result">
             <div class="col-md-6">
                 <p>Original poem</p>
-                {a result.originalPoem a}
+                <pre>{a result.originalPoem a}</pre>
             </div>
             <div class="col-md-6">
                 <p>Generated poem</p>
-                {a result.poem a}
+                <pre>{a result.poem a}</pre>
             </div>
             <div class="col-md-12">
                 <p>Diff</p>
-                {a result.poem a}
+                <pre><span ng-bind-html="result.originalPoem|diff:result.poem"></span></pre>
             </div>
         </div>
     </div>
@@ -72,6 +72,7 @@
         crossorigin="anonymous"></script>
 
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+<script src="/static/js/diff.filter.js"></script>
 <script src="/static/js/app.js"></script>
 </body>
 </html>

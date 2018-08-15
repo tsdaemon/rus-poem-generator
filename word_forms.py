@@ -38,6 +38,8 @@ class Phonetic(object):
 
 
 class WordForms(object):
+    DO_NOT_WANT_TO_REPLACE = ['эх']
+
     def __init__(self, phonetic, corpus_reader):
         self.phonetic = phonetic
         self.pos = MorphAnalyzer()
@@ -49,17 +51,38 @@ class WordForms(object):
         word_by_form = collections.defaultdict(set)
         for token in tqdm(self.corpus, desc='Parsing word forms'):
             if token.isalpha():
-                form = self.get_form(token)
-                word_by_form[form].add(token)
+                forms = self.get_forms(token)
+                for form in forms:
+                    word_by_form[form].add(token)
 
         return word_by_form
 
-    def get_form(self, word):
+    def get_forms(self, word):
+        """
+        Can be multiple forms because each word can have multiple POS interpretations
+        :param word:
+        :return:
+        """
+
+        # Деякі виключення — слова які не варто заміняти
+        if word in self.DO_NOT_WANT_TO_REPLACE:
+            return []
+
         word_syllables = self.phonetic.syllables_count(word)
         word_accent = self.phonetic.accent_syllable(word)
-        word_tag = self.pos.parse(word)[0].tag
-        word_pos = str(word_tag.POS)
-        return word_syllables, word_accent, word_pos
+        tags = [parse.tag for parse in self.pos.parse(word)]
+        forms = []
+        for word_tag in tags:
+            word_pos = str(word_tag.POS)
+            word_gender = str(word_tag.gender)
+            word_number = str(word_tag.number)
+            word_tense = str(word_tag.tense)
+            word_case = str(word_tag.case)
+
+            form = (word_syllables, word_accent, word_pos, word_gender, word_number,
+                    word_tense, word_case)
+            forms.append(form)
+        return list(set(forms))
 
 
 def get_csv_reader(corpora_file, column, max_docs=50000):
