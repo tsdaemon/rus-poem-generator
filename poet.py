@@ -112,7 +112,7 @@ def generate_poem(seed, poet_id):
             # TODO: якщо використати тут інший (не словниковий) алгоритм визначення частини мови,
             # можна визначити частину мови однозначно.
             forms, lemmas = zip(*word_forms.get_forms(word))
-            if not forms:
+            if not forms or forms == (None,):
                 continue
 
             # Заміняємо тільки іменники, дієслова та прикметники

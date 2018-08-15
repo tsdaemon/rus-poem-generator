@@ -37,7 +37,7 @@ class Phonetic(object):
         return distance
 
 
-DO_NOT_WANT_TO_REPLACE = ['эх', 'и', 'еще', 'уже', 'когда']
+DO_NOT_WANT_TO_REPLACE = ['эх', 'и', 'еще', 'уже', 'когда', 'ли']
 
 
 class WordForms(object):
@@ -68,7 +68,7 @@ class WordForms(object):
 
         # Деякі виключення — слова які не варто заміняти
         if word in DO_NOT_WANT_TO_REPLACE:
-            return []
+            return [(None, None)]
 
         word_syllables = self.phonetic.syllables_count(word)
         word_accent = self.phonetic.accent_syllable(word)
