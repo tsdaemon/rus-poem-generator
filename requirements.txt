@@ -6,3 +6,4 @@ flask
 pymystem3
 pymorphy2
 tqdm
+torch

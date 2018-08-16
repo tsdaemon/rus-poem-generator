@@ -2,15 +2,17 @@ import os
 import copy
 import pickle
 from timeit import default_timer as timer
+from collections import defaultdict
 
 from word_forms import Phonetic, WordForms
-from utils import PoemTemplateLoader, Word2vecProcessor
+from word_vectors import Word2vecGensim, Word2VecTorch
+from utils import PoemTemplateLoader
 
 # Загальні набори даних присутні на тестувальному сервері
 DATASETS_PATH = os.environ.get('DATASETS_PATH', '/data/')
 # Наші набори даних присутні локально
 LOCAL_DATA_PATH = './data'
-timers = {}
+timers = defaultdict(float)
 
 # Гіперпараметри
 MAX_PHONETIC_DISTANCE_TO_CHANGE = 1
@@ -18,10 +20,14 @@ MAX_COSINE_DISTANCE_TO_CHANGE = 0.7
 POS_TO_REPLACE = ['NOUN', 'AVJ', 'ADJF', 'ADJM', 'VERB', 'ADVB']  # TODO: це можна розширити
 
 
-def measure_time(func, name):
+def measure_time(func, name, local_timers=None):
+    global timers
+    if local_timers is not None:
+        timers = local_timers
+
     start = timer()
     result = func()
-    timers[name] = timer()-start
+    timers[name] += timer() - start
     return result
 
 
@@ -33,10 +39,14 @@ template_loader = measure_time(
 
 # Word2vec модель для оценки схожести слов и темы: берем из каталога RusVectores.org
 word2vec = measure_time(
-    lambda: Word2vecProcessor(os.path.join(DATASETS_PATH, 'web_upos_cbow_300_20_2017.bin.gz')),
+    lambda: Word2vecGensim(os.path.join(LOCAL_DATA_PATH, 'web_upos_cbow_300_20_2017.bin')),
     'Word2vec'
 )
 
+# word2vec_torch = measure_time(
+#     lambda: Word2VecTorch(os.path.join(LOCAL_DATA_PATH, 'web_upos_cbow_300_20_2017.bin')),
+#     'Word2vec'
+# )
 
 # TODO: тут також акценти не дуже працюють, але я не знаю, що можна покращити
 phonetic = measure_time(
@@ -50,7 +60,7 @@ with open(os.path.join(LOCAL_DATA_PATH, 'words_forms.bin'), 'rb') as f:
         'Word forms'
     )
 
-timers['Total'] = sum(v for k,v in timers.items())
+timers['Total'] = sum(v for k, v in timers.items())
 
 print('Load finished, elapsed time: {}'.format(timers))
 
@@ -71,30 +81,50 @@ def _filter_words_by_phonetic_distance(replacement_candidates_with_lemmas, word)
 
 
 def _get_word_by_vector(replacement_candidates_with_lemmas, seed_vec):
+    words, lemmas = zip(*replacement_candidates_with_lemmas)
+    distances = word2vec.distance(words, seed_vec)
+
     # из кандидатов берем максимально близкое теме слово
-    # TODO: оце можна пришвидчити якщо перемножувати тензори одразу пачкою і на GPU
-    word2vec_distances = [
-        (replacement_word, lemma, word2vec.distance(seed_vec, word2vec.word_vector(replacement_word)))
-        for replacement_word, lemma in replacement_candidates_with_lemmas
-    ]
-    word2vec_distances.sort(key=lambda pair: pair[2])
-    new_word, lemma, distance = word2vec_distances[0]
+    cand_distances_with_lemmas = list(zip(words, lemmas, distances))
+    cand_distances_with_lemmas.sort(key=lambda pair: pair[2])
+
+    new_word, lemma, distance = cand_distances_with_lemmas[0]
     if distance > MAX_COSINE_DISTANCE_TO_CHANGE:
         return None, None
+
     return new_word, lemma
 
 
-def generate_poem(seed, poet_id):
+def _get_repacement_candidates(forms, used_words):
+    # Обираємо можливі замінники. Знаходимо слова, які мають таку саму форму
+    words_by_forms = [word_forms.word_by_form[f] for f in forms]
+    replacement_candidates_with_lemmas = [
+        (word, lemma)
+        for sublist in words_by_forms
+        for word, lemma in sublist
+        if lemma not in used_words
+    ]
+    return replacement_candidates_with_lemmas
+
+
+def generate_poem(seed, poet_id, random):
     """
     Алгоритм генерации стихотворения на основе фонетических шаблонов
     """
 
     # выбираем шаблон на основе случайного стихотворения из корпуса
-    template = template_loader.get_random_template(poet_id)
+    template = template_loader.get_random_template(poet_id, random)
     poem = copy.deepcopy(template)
 
+    # Вимірюємо час
+    local_timers = defaultdict(float)
+
     # оцениваем word2vec-вектор темы
-    seed_vec = word2vec.text_vector(seed)
+    seed_vec = measure_time(lambda: word2vec.text_vector(seed), 'Text vector', local_timers)
+    # seed_vec_torch = word2vec_torch.text_vector(seed).squeeze(0).numpy()
+    #
+    # assert (seed_vec == seed_vec_torch).all()
+
 
     # TODO: ще можна слова з сіда якось пробувати використовувати. Може додавати їх з більшими
     # вагами?
@@ -119,22 +149,19 @@ def generate_poem(seed, poet_id):
             if forms[0][2] not in POS_TO_REPLACE:
                 continue
 
-            # Обираємо можливі замінники. Знаходимо слова, які мають таку саму форму
-            words_by_forms = [word_forms.word_by_form[f] for f in forms]
-            replacement_candidates_with_lemmas = [
-                (word, lemma)
-                for sublist in words_by_forms
-                for word, lemma in sublist
-                if lemma not in used_words
-            ]
-            if not replacement_candidates_with_lemmas:
-                continue
+            replacement_candidates_with_lemmas = measure_time(
+                lambda: _get_repacement_candidates(forms, used_words),
+                'Looking for replacement',
+                local_timers
+            )
 
             # Якщо це останнє слово в рядку, фільтруємо кандидатів за фонетичною відстаню
-            if ti == len(line)-1:
-                replacement_candidates_with_lemmas = _filter_words_by_phonetic_distance(
-                    replacement_candidates_with_lemmas,
-                    word
+            if ti == len(line) - 1:
+                replacement_candidates_with_lemmas = measure_time(
+                    lambda: _filter_words_by_phonetic_distance(
+                        replacement_candidates_with_lemmas,
+                        word
+                    ), 'Phonetic distance', local_timers
                 )
                 if not replacement_candidates_with_lemmas:
                     continue
@@ -147,7 +174,11 @@ def generate_poem(seed, poet_id):
             if len(replacement_candidates_with_lemmas) < 2:
                 continue
 
-            new_word, lemma = _get_word_by_vector(replacement_candidates_with_lemmas, seed_vec)
+            new_word, lemma = measure_time(
+                lambda: _get_word_by_vector(replacement_candidates_with_lemmas, seed_vec),
+                'Word similarities',
+                local_timers
+            )
             if not new_word:
                 continue
 
@@ -162,4 +193,4 @@ def generate_poem(seed, poet_id):
     # оригінальний темплейт
     original_poem = '\n'.join([' '.join([token for token in line]) for line in template])
 
-    return generated_poem, original_poem
+    return generated_poem, original_poem, local_timers

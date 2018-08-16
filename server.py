@@ -24,9 +24,12 @@ def ready():
 def generate(poet_id):
     request_data = request.get_json()
     seed = request_data['seed']
+    random = request_data.get('random', None)
     try:
-        generated_poem, original_poem = poet.generate_poem(seed, poet_id)
-        return jsonify({'poem': generated_poem, 'originalPoem': original_poem})
+        generated_poem, original_poem, timers = poet.generate_poem(seed, poet_id, random)
+        print(timers)
+        timers = [(k,v) for k,v in timers.items()]
+        return jsonify({'poem': generated_poem, 'originalPoem': original_poem, 'timers': timers})
     except KeyError:
         abort(404)
 

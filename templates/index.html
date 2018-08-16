@@ -35,6 +35,11 @@
             </div>
 
             <div class="form-group">
+                <label for="random">Random seed</label>
+                <input class="form-control" type="number" id="random" ng-model="random" />
+            </div>
+
+            <div class="form-group">
                 <label for="seed">Seed topic</label>
                 <textarea class="form-control" ng-model="seed" id="seed" required></textarea>
             </div>
@@ -43,7 +48,7 @@
                 <button class="btn btn-default" type="submit">Send</button>
             </div>
         </form>
-        <div class="row" ng-show="result">
+        <div class="row" ng-if="result">
             <div class="col-md-6">
                 <p>Original poem</p>
                 <pre>{a result.originalPoem a}</pre>
@@ -55,6 +60,12 @@
             <div class="col-md-12">
                 <p>Diff</p>
                 <pre><span ng-bind-html="result.originalPoem|diff:result.poem"></span></pre>
+            </div>
+            <div class="col-md-12">
+                <p>Timers</p>
+                <p ng-repeat="t in result.timers">
+                    {a t[0] a}: {a t[1] a}
+                </p>
             </div>
         </div>
     </div>

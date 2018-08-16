@@ -12,13 +12,17 @@ angular.module('poetry', ['diff'])
     'mayakovskij',
     'blok',
     'tyutchev'
-  ]
+  ];
   
   $scope.submitSeed = function() {
     if($scope.poetForm.$valid) {
-      $http.post('/generate/' + $scope.poet, {
+      var data = {
         'seed': $scope.seed
-      }).then(function(response) {
+      };
+      if($scope.random) {
+        data['random'] = $scope.random;
+      }
+      $http.post('/generate/' + $scope.poet, data).then(function(response) {
         $scope.result = response.data;
       });
     }
