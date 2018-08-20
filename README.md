@@ -4,9 +4,11 @@
 Скачати це все можливо, виконавши скрипт `make download`. Потім препроцессінг `make preprocess`.
 Запуск: `make server`.
 
-Описание используемой word2vec модели [RusVectores](http://rusvectores.org/ru/about/) можно найти в публикации:
+Якщо ви змінили набір пакетів, треба:
 
-Kutuzov A., Kuzmenko E. (2017) **WebVectors: A Toolkit for Building Web Interfaces for Vector Semantic Models.** In: Ignatov D. et al. (eds) Analysis of Images, Social Networks and Texts. AIST 2016. Communications in Computer and Information Science, vol 661. Springer, Cham
+1. Додати новий пакет в `./requirements.txt` та `./docker/Dockerfile`
+2. Збілдити образ `docker build -t tsdaemon/classic-python .`
+3. Запушити образ `docker push tsdaemon/classic-python`
 
 
 

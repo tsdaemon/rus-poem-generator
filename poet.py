@@ -5,6 +5,7 @@ from timeit import default_timer as timer
 from collections import defaultdict
 
 from word_forms import Phonetic, WordForms
+from scripts.serialize_word_forms import PosUnpickler
 from word_vectors import Word2vecGensim, Word2VecTorch
 from utils import PoemTemplateLoader
 
@@ -56,7 +57,7 @@ phonetic = measure_time(
 
 with open(os.path.join(LOCAL_DATA_PATH, 'words_forms.bin'), 'rb') as f:
     word_forms = measure_time(
-        lambda: pickle.load(f),
+        lambda: PosUnpickler(f).load(),
         'Word forms'
     )
 
@@ -121,9 +122,6 @@ def generate_poem(seed, poet_id, random):
 
     # оцениваем word2vec-вектор темы
     seed_vec = measure_time(lambda: word2vec.text_vector(seed), 'Text vector', local_timers)
-    # seed_vec_torch = word2vec_torch.text_vector(seed).squeeze(0).numpy()
-    #
-    # assert (seed_vec == seed_vec_torch).all()
 
 
     # TODO: ще можна слова з сіда якось пробувати використовувати. Може додавати їх з більшими
@@ -185,7 +183,7 @@ def generate_poem(seed, poet_id, random):
             poem[li][ti] = new_word
             used_words.append(lemma)
 
-    assert template != poem, 'Should change something'
+    # assert template != poem, 'Should change something'
 
     # собираем получившееся стихотворение из слов
     generated_poem = '\n'.join([' '.join([token for token in line]) for line in poem])
