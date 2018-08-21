@@ -1,30 +1,11 @@
 import os
-import pickle
 
-from pymorphy2 import MorphAnalyzer
-
-from word_forms import Phonetic, WordForms, get_csv_reader
-
-
-class PosPickler(pickle.Pickler):
-    def persistent_id(self, obj):
-        if isinstance(obj, MorphAnalyzer):
-            return "POS"
-        else:
-            return None
-
-
-class PosUnpickler(pickle.Unpickler):
-    def __init__(self, file):
-        super().__init__(file)
-
-    def persistent_load(self, id):
-        if id == "POS":
-            return MorphAnalyzer()
-        else:
-            raise pickle.UnpicklingError("unsupported persistent object")
-
-
+from word.forms import WordForms, get_csv_reader
+from word.accent import AccentRussianNlp
+from word.phonetic import Phonetic
+from word.morph import PosAnalyzerMorphy
+from tools.picklers import PosPickler
+from constants import *
 
 if __name__ == '__main__':
     """
@@ -32,9 +13,6 @@ if __name__ == '__main__':
     too much time.
     
     """
-
-    DATASETS_PATH = os.environ.get('DATASETS_PATH')
-    LOCAL_DATA_PATH = './data'
 
     # Change this to load other corpora
     # Словарь слов-кандидатов по фонетическим формам: строится из набора данных SDSJ 2017
@@ -44,11 +22,17 @@ if __name__ == '__main__':
     column = 'paragraph'
     reader = get_csv_reader(filename, column)
 
-    # Dictionary of stresses
-    phonetic = Phonetic(os.path.join(LOCAL_DATA_PATH, 'words_accent.json.bz2'))
+    # Phonetic analyzer
+    phonetic = Phonetic()
+
+    # Accents dictionary
+    accent = AccentRussianNlp(os.path.join(LOCAL_DATA_PATH, 'stress.txt'))
+
+    # Morhology analyzer
+    pos = PosAnalyzerMorphy()
 
     # Instance
-    word_forms = WordForms(phonetic, reader)
+    word_forms = WordForms(phonetic, accent, pos, reader)
     filename = os.path.join(LOCAL_DATA_PATH, 'words_forms.bin')
     if os.path.exists(filename):
         os.remove(filename)

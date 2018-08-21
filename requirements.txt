@@ -7,3 +7,4 @@ pymystem3
 pymorphy2
 tqdm
 torch
+russtress

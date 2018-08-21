@@ -7,6 +7,11 @@ download:
 	wget https://github.com/sberbank-ai/classic-ai/raw/master/examples/phonetic-baseline/data/words_accent.json.bz2 -P ./data
 	wget http://rusvectores.org/static/models/web_upos_cbow_300_20_2017.bin.gz -P ./data
 	gzip -d web_upos_cbow_300_20_2017.bin.gz
+	wget https://github.com/buriy/russian-nlp-datasets/releases/download/r1/stress.tar.gz -P ./data
+	tar -C ./data -xzf ./data/stress.tar.gz
+	rm ./data/stress.tar.gz
+	mv ./data/stress/stress.txt ./data/stress.txt
+	rm -rf ./data/stress/
 
 	rm -rf ~/.classic-ai-local-data
 	mkdir ~/.classic-ai-local-data
