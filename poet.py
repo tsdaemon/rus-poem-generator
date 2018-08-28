@@ -1,4 +1,3 @@
-import os
 import copy
 from timeit import default_timer as timer
 from collections import defaultdict

@@ -1,11 +1,9 @@
-from abc import ABC, abstractmethod
-
 import numpy as np
 from scipy.spatial.distance import cosine
 
 from gensim.models import KeyedVectors
-from pymystem3 import Mystem
 from nltk.tokenize import word_tokenize
+from pymorphy2 import MorphAnalyzer as MorphyPos
 
 import torch
 import torch.nn as nn
@@ -13,7 +11,7 @@ import torch.nn as nn
 
 class Word2vecGensim(object):
     def __init__(self, w2v_model_file):
-        self.mystem = Mystem()
+        self.stem = MorphyPos()
         self.word2vec = KeyedVectors.load_word2vec_format(w2v_model_file, binary=True)
         # TODO: Оригінальна index2word в цьому словнику: слово_POS, можна би це використати
         self.lemma2word = {word.split('_')[0]: i for i, word in enumerate(self.word2vec.index2word)}
@@ -25,7 +23,7 @@ class Word2vecGensim(object):
         return self.word2vec.vectors[w_index]
 
     def _word_index(self, word):
-        lemma = self.mystem.lemmatize(word)[0]
+        lemma = str(self.stem.parse(word)[0].normal_form)
         index = self.lemma2word.get(lemma, -1)
         return index
 

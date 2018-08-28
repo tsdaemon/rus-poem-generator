@@ -23,3 +23,14 @@ preprocess:
 
 server:
 	python server.py
+
+testspeed:
+	py.test tests/test_speed.py -v -s
+
+testworks:
+	py.test tests/test_it_works.py -v
+
+make test:
+	make testworks
+	make testspeed
+

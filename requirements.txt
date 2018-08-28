@@ -3,8 +3,8 @@ scipy
 gensim
 nltk
 flask
-pymystem3
 pymorphy2
 tqdm
 torch
 russtress
+pytest
