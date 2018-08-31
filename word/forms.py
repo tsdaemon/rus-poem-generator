@@ -5,7 +5,7 @@ import collections
 from nltk.tokenize import word_tokenize
 from tqdm import tqdm
 
-Word = collections.namedtuple("Word", ["word", "phonetic_form", "pos_form", "lemma"])
+Word = collections.namedtuple("Word", ["word", "phonetic_form", "morph_form", "lemma"])
 
 
 class WordForms(object):
@@ -23,25 +23,35 @@ class WordForms(object):
             if token.isalpha():
                 words = list(self.parse(token))
                 for word in words:
-                    word_by_form[(word.phonetic_form, word.pos_form)].add(word)
+                    word_by_form[(word.phonetic_form, word.morph_form)].add(word)
 
         return word_by_form
 
-    def parse_text(self, text):
+    def parse_text(self, text, phonetic=True):
         """
         Parse using contextual information
 
+        :param phonetic: Extract phonetic information
         :param text:
         :return:
         """
-        tokens_accents = self.accent.multy_accent(text)
+        if phonetic:
+            tokens_accents = self.accent.multy_accent(text)
+        else:
+            tokens = word_tokenize(text)
+            tokens_accents = zip(tokens, [0]*len(tokens))
 
         for token, accent in tokens_accents:
-            syllables = self.phonetic.syllables_count(token)
+            if accent == -1:  # special case for puctuation
+                yield Word(token, None, None, token)
+            if phonetic:
+                syllables = self.phonetic.syllables_count(token)
+            else:
+                syllables = 0
             phonetic_form = (syllables, accent)
             # Use only first POS option and hope it is right
-            pos_form, lemma = self.pos.get_word_forms(token)[0]
-            yield Word(token, phonetic_form, pos_form, lemma)
+            morph_form, lemma = self.pos.get_word_forms(token)[0]
+            yield Word(token, phonetic_form, morph_form, lemma)
 
     def parse(self, word, word_accents=None):
         """
@@ -60,20 +70,19 @@ class WordForms(object):
         word_forms_and_lemmas = self.pos.get_word_forms(word)
 
         for accent, form_n_lemma in itertools.product(word_accents, word_forms_and_lemmas):
-            pos_form, lemma = form_n_lemma
+            morph_form, lemma = form_n_lemma
             phonetic_form = (word_syllables, accent)
-            yield Word(word, phonetic_form, pos_form, lemma)
+            yield Word(word, phonetic_form, morph_form, lemma)
 
 
-def get_csv_reader(corpora_file, column, max_docs=50000):
+def get_csv_reader(corpora_file, column):
     def read():
         corpora_tokens = []
         with open(corpora_file) as fin:
             reader = csv.DictReader(fin)
-            total = max_docs
-            for row in tqdm(itertools.islice(reader, max_docs),
+            for row in tqdm(reader,
                             desc='Reading corpora',
-                            total=total):
+                            total=51000):  # ~
                 paragraph = row[column]
                 paragraph_tokens = word_tokenize(paragraph.lower())
                 corpora_tokens += paragraph_tokens

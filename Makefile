@@ -18,9 +18,6 @@ download:
 	wget https://raw.githubusercontent.com/sberbank-ai/classic-ai/master/data/classic_poems.json -P $(DATASETS_PATH)
 	wget https://bucketeer-db1966c9-c9f8-427d-ae61-659a91a9fca7.s3.amazonaws.com/public/sdsj2017_sberquad.csv -P $(DATASETS_PATH)
 
-preprocess:
-	python ./scripts/serialize_word_forms.py
-
 server:
 	python server.py
 
@@ -30,7 +27,14 @@ testspeed:
 testworks:
 	py.test tests/test_it_works.py -v
 
-make test:
+test:
 	make testworks
 	make testspeed
+
+serialize_word_forms:
+	python ./scripts/serialize_word_forms.py
+
+get_templates_stats:
+	python ./scripts/get_templates_stats.py
+
 

@@ -5,7 +5,7 @@ from collections import defaultdict
 from word.phonetic import Phonetic
 from tools.picklers import PosUnpickler
 from word.vectors import Word2VecTorch
-from utils import PoemTemplateLoader
+from word.templates import PoemTemplateLoader, untokenize_template, untokenize
 
 from constants import *
 
@@ -18,7 +18,14 @@ timers = defaultdict(float)
 # Гіперпараметри
 MAX_PHONETIC_DISTANCE_TO_CHANGE = 1
 MAX_COSINE_DISTANCE_TO_CHANGE = 0.7
-POS_TO_REPLACE = ['NOUN', 'AVJ', 'ADJF', 'ADJM', 'VERB', 'ADVB']  # TODO: це можна розширити
+POS_TO_REPLACE = [
+    'NOUN',
+    'AVJ',
+    'ADJF',
+    'ADJM',
+    # 'VERB', дієслова дуже погано заміняються
+    'ADVB'
+]  # TODO: це можна розширити
 
 
 def measure_time(func, name, local_timers=None):
@@ -73,8 +80,7 @@ def _filter_words_by_phonetic_distance(replacement_candidates, word):
 
 
 def _get_word_by_vector(replacement_candidates, seed_vec):
-    words = [w.word for w in replacement_candidates]
-    distances = word2vec.distance(words, seed_vec)
+    distances = word2vec.distance(replacement_candidates, seed_vec)
 
     # из кандидатов берем максимально близкое теме слово
     cand_distances = list(zip(replacement_candidates, distances))
@@ -89,9 +95,17 @@ def _get_word_by_vector(replacement_candidates, seed_vec):
 
 def _get_repacement_candidates(word, used_words):
     # Обираємо можливі замінники. Знаходимо слова, які мають таку саму форму
-    words_by_form = word_forms.word_by_form[(word.phonetic_form, word.pos_form)]
+    words_by_form = word_forms.word_by_form[(word.phonetic_form, word.morph_form)]
     return [w for w in words_by_form
             if w.lemma not in used_words and w.word not in DO_NOT_WANT_TO_REPLACE]
+
+
+def last_word_in_row(ti, words):
+    if ti == len(words) - 1:
+        return True
+    # all next words are puctuation
+    words = words[ti+1:]
+    return all(w.word.strip() in PUNCTUATION for w in words)
 
 
 def generate_poem(seed, poet_id, random):
@@ -107,7 +121,8 @@ def generate_poem(seed, poet_id, random):
     local_timers = defaultdict(float)
 
     # оцениваем word2vec-вектор темы
-    seed_vec = measure_time(lambda: word2vec.text_vector(seed), 'Text vector', local_timers)
+    seed_tokens = word_forms.parse_text(seed, phonetic=False)
+    seed_vec = measure_time(lambda: word2vec.text_vector(seed_tokens), 'Text vector', local_timers)
 
     # TODO: ще можна слова з сіда якось пробувати використовувати. Може додавати їх з більшими
     # вагами?
@@ -120,18 +135,18 @@ def generate_poem(seed, poet_id, random):
         words = list(word_forms.parse_text(' '.join(line)))
         assert len(words) == len(line)
         for ti, word in enumerate(words):
-            # Заміняємо тільки іменники, дієслова та прикметники
-            if word.pos_form[0] not in POS_TO_REPLACE:
-                continue
-
-            # Не заміняємо деякі фіксовані слова
-            if word.word in DO_NOT_WANT_TO_REPLACE:
+            # Заміняємо тільки іменники, дієслова та прикметники,
+            # пропускаємо пунктуацію,
+            # не заміняємо деякі фіксовані слова
+            if word.word.strip() in PUNCTUATION or \
+                    word.morph_form.pos not in POS_TO_REPLACE or \
+                    word.word in DO_NOT_WANT_TO_REPLACE:
                 continue
 
             replacement_candidates = _get_repacement_candidates(word, used_words)
 
             # Якщо це останнє слово в рядку, фільтруємо кандидатів за фонетичною відстаню
-            if ti == len(words) - 1:
+            if last_word_in_row(ti, words):
                 replacement_candidates = _filter_words_by_phonetic_distance(
                     replacement_candidates,
                     word
@@ -158,12 +173,7 @@ def generate_poem(seed, poet_id, random):
             poem[li][ti] = new_word.word
             used_words.append(new_word.lemma)
 
-    # assert template != poem, 'Should change something'
-
-    # собираем получившееся стихотворение из слов
-    generated_poem = '\n'.join([' '.join([token for token in line]) for line in poem])
-
-    # оригінальний темплейт
-    original_poem = '\n'.join([' '.join([token for token in line]) for line in template])
+    generated_poem = untokenize_template(poem)
+    original_poem = untokenize_template(template)
 
     return generated_poem, original_poem, local_timers

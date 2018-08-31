@@ -3,7 +3,6 @@ from scipy.spatial.distance import cosine
 
 from gensim.models import KeyedVectors
 from nltk.tokenize import word_tokenize
-from pymorphy2 import MorphAnalyzer as MorphyPos
 
 import torch
 import torch.nn as nn
@@ -11,28 +10,25 @@ import torch.nn as nn
 
 class Word2vecGensim(object):
     def __init__(self, w2v_model_file):
-        self.stem = MorphyPos()
         self.word2vec = KeyedVectors.load_word2vec_format(w2v_model_file, binary=True)
-        # TODO: Оригінальна index2word в цьому словнику: слово_POS, можна би це використати
-        self.lemma2word = {word.split('_')[0]: i for i, word in enumerate(self.word2vec.index2word)}
+        self.lemmapos2index = {(word.split('_')[0], word.split('_')[1]): i for i, word in enumerate(self.word2vec.index2word)}
 
-    def _word_vector(self, word):
-        w_index = self._word_index(word)
+    def _word_vector(self, lemma, pos):
+        w_index = self._word_index(lemma, pos)
         if w_index == -1:
             return None
         return self.word2vec.vectors[w_index]
 
-    def _word_index(self, word):
-        lemma = str(self.stem.parse(word)[0].normal_form)
-        index = self.lemma2word.get(lemma, -1)
+    def _word_index(self, lemma, pos):
+        index = self.lemmapos2index.get((lemma, pos), -1)
         return index
 
-    def text_vector(self, text):
+    def text_vector(self, words):
         word_vectors = [
-            self._word_vector(token)
-            for token in word_tokenize(text.lower())
-            if token.isalpha()
-            ]
+            self._word_vector(word.lemma, word.morph_form.pos)
+            for word in words
+            if word.word.isalpha()
+        ]
         word_vectors = [vec for vec in word_vectors if vec is not None]
         if not word_vectors:
             return np.zeros(*self.word2vec.vectors[0].shape)
@@ -78,8 +74,7 @@ class Word2VecTorch(Word2vecGensim):
         similarity_tensor = 1-self.similarity(words_tensor, vector)
         return similarity_tensor.tolist()
 
-    def text_vector(self, text):
-        words = word_tokenize(text)
+    def text_vector(self, words):
         # (n_words, embed_length)
         embeds = self._vectorize_and_embed(words)
         # (1, embed_length)
@@ -88,7 +83,7 @@ class Word2VecTorch(Word2vecGensim):
 
     def _vectorize_and_embed(self, words):
         # convert to indices
-        indices = [self._word_index(word) for word in words]
+        indices = [self._word_index(word.lemma, word.morph_form.pos) for word in words]
         # [(1, embed_length)]
         vectors = [self.embed[i].unsqueeze(0) if i != -1 else self.unk_embed for i in indices]
         # (n_words, embed_length)

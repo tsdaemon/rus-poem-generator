@@ -1,10 +1,16 @@
 from abc import ABC
+import collections
 
 from pymorphy2 import MorphAnalyzer as MorphyPos
 
+MorphForm = collections.namedtuple("MorphForm", ["pos", "gender", "number", "tense", "case"])
+
 
 class PosAnalyzerBase(ABC):
-    def get_post_form(self, word):
+    def get_word_forms(self, word):
+        pass
+
+    def get_word_lemma(self, word):
         pass
 
 
@@ -23,9 +29,8 @@ class PosAnalyzerMorphy(PosAnalyzerBase):
             word_case = str(parse.tag.case)
 
             lemma = str(parse.normal_form)
-            form = (word_pos, word_gender, word_number, word_tense, word_case)
+            form = MorphForm(word_pos, word_gender, word_number, word_tense, word_case)
 
             forms_n_lemmas.append((form, lemma))
 
         return forms_n_lemmas
-

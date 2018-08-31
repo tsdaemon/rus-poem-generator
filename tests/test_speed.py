@@ -22,14 +22,16 @@ def test_generation_time(local_client: TestPoemClient, poet):
         stop = timer()
 
         req_time = stop - start
-        assert req_time < 5, "Generation is too long, poet {}, poem length {}".format(
-            poet, len(response['poem'])
-        )
         req_times.append(req_time)
 
-    print('\nMean generation time: {}\nMedian generation time: {}\nSTD: {}\nQuantiles: {}'.format(
+    assert (np.array(req_times) < 5).all(), "Generation is too long, poet {}, poem length {}".format(
+        poet, len(response['poem'])
+    )
+
+    print('\nMean generation time: {}\nMedian generation time: {}\nSTD: {}\nMax: {}\nQuantiles: {}'.format(
         np.mean(req_times),
         np.median(req_times),
         np.std(req_times),
+        np.max(req_times),
         np.percentile(req_times, [25, 75])
     ))

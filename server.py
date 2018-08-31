@@ -33,11 +33,14 @@ def generate(poet_id):
         print(timers)
         print('Original poem length: {}'.format(len(original_poem)))
         timers = [(k,v) for k,v in timers.items()]
-        return jsonify({'poem': generated_poem, 'originalPoem': original_poem, 'timers': timers})
+        return jsonify({
+            'poem': generated_poem,
+            'originalPoem': original_poem,
+            'timers': timers
+        })
     except KeyError:
         abort(404)
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000, debug=True, use_reloader=True)
-    app.config['JSON_AS_ASCII'] = False
+    app.run(host='0.0.0.0', port=8000)
