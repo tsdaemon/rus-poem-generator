@@ -5,7 +5,7 @@ from collections import defaultdict
 from word.phonetic import Phonetic
 from tools.picklers import PosUnpickler
 from word.vectors import Word2VecTorch
-from word.templates import PoemTemplateLoader, untokenize_template, untokenize
+from word.templates import PoemTemplateLoader, untokenize_template
 
 from constants import *
 
@@ -177,3 +177,10 @@ def generate_poem(seed, poet_id, random):
     original_poem = untokenize_template(template)
 
     return generated_poem, original_poem, local_timers
+
+
+def get_poem(seed, poet_id, random):
+    generated_poem, original_poem, timers = '', '', None
+    while generated_poem == original_poem:
+        generated_poem, original_poem, timers = generate_poem(seed, poet_id, random)
+    return generated_poem, original_poem, timers

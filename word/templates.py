@@ -10,7 +10,7 @@ from tqdm import tqdm
 
 from constants import PUNCTUATION
 
-MAX_LINE_LENGTH = 200
+MAX_LINE_LENGTH = 100
 
 
 def untokenize_template(template):

@@ -1,3 +1,7 @@
+import sys
+from collections import defaultdict
+from timeit import default_timer as timer
+
 from flask import Flask, request, jsonify, abort, render_template, send_from_directory
 
 import poet
@@ -27,12 +31,12 @@ def generate(poet_id):
     random = request_data.get('random', None)
     try:
         # fake it till you make it
-        generated_poem, original_poem = '', ''
-        while generated_poem == original_poem:
-            generated_poem, original_poem, timers = poet.generate_poem(seed, poet_id, random)
-        print(timers)
-        print('Original poem length: {}'.format(len(original_poem)))
-        timers = [(k,v) for k,v in timers.items()]
+        start = timer()
+        generated_poem, original_poem, timers = poet.get_poem(seed, poet_id, random)
+        t = timer()-start
+        sys.stderr.write('Generation time: ' + str(t) + ' ')
+        timers = [(k, v) for k, v in timers.items()]
+        # print(timers)
         return jsonify({
             'poem': generated_poem,
             'originalPoem': original_poem,
